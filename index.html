@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Примитивный фуллстек сайт</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+    }
+
+    .app {
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    }
+
+    h1, h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"],
+    textarea {
+      padding: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 14px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    #messages {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .message {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+
+    .message-author {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .message-text {
+      margin-bottom: 4px;
+    }
+
+    .message-date {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .error {
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>Гостевая книга</h1>
+
+    <form id="message-form">
+      <input
+        type="text"
+        id="author"
+        placeholder="Твоё имя (необязательно)"
+      />
+      <textarea
+        id="text"
+        placeholder="Напиши сообщение..."
+        required
+      ></textarea>
+      <button type="submit">Отправить</button>
+    </form>
+
+    <h2>Сообщения</h2>
+    <div id="messages"></div>
+  </div>
+
+  <script>
+    const API_URL = '/api/messages';
+
+    const form = document.getElementById('message-form');
+    const authorInput = document.getElementById('author');
+    const textInput = document.getElementById('text');
+    const messagesContainer = document.getElementById('messages');
+
+    async function loadMessages() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        renderMessages(data);
+      } catch (err) {
+        console.error('Ошибка загрузки сообщений:', err);
+        messagesContainer.innerHTML = '<p class="error">Не удалось загрузить сообщения</p>';
+      }
+    }
+
+    function renderMessages(messages) {
+      if (!messages.length) {
+        messagesContainer.innerHTML = '<p>Сообщений пока нет. Будь первым!</p>';
+        return;
+      }
+
+      messagesContainer.innerHTML = '';
+      messages.forEach(msg => {
+        const div = document.createElement('div');
+        div.className = 'message';
+
+        const author = document.createElement('div');
+        author.className = 'message-author';
+        author.textContent = msg.author;
+
+        const text = document.createElement('div');
+        text.className = 'message-text';
+        text.textContent = msg.text;
+
+        const date = document.createElement('div');
+        date.className = 'message-date';
+        date.textContent = new Date(msg.createdAt).toLocaleString();
+
+        div.appendChild(author);
+        div.appendChild(text);
+        div.appendChild(date);
+
+        messagesContainer.appendChild(div);
+      });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const author = authorInput.value;
+      const text = textInput.value;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ author, text })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || 'Ошибка при отправке сообщения');
+          return;
+        }
+
+        await loadMessages();
+        textInput.value = '';
+      } catch (err) {
+        console.error('Ошибка отправки сообщения:', err);
+        alert('Не удалось отправить сообщение');
+      }
+    });
+
+    loadMessages();
+  </script>
+</body>
+</html>

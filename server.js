@@ -2,13 +2,28 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+// Порт: локально 3000, на хостинге придёт из process.env.PORT
+const PORT = process.env.PORT || 3000;
 
-// "База данных" в памяти
+// "База" в памяти
 const messages = [];
 
+// Общая функция для CORS
+function setCors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*'); // можно ограничить своим доменом
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+}
+
 const server = http.createServer((req, res) => {
-  // Главная страница
+  // Префлайт-запросы браузера
+  if (req.method === 'OPTIONS') {
+    setCors(res);
+    res.writeHead(204);
+    return res.end();
+  }
+
+  // Главная страница (для локальной проверки)
   if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) {
     const filePath = path.join(__dirname, 'index.html');
     fs.readFile(filePath, (err, data) => {
@@ -24,12 +39,14 @@ const server = http.createServer((req, res) => {
 
   // Получить все сообщения
   if (req.method === 'GET' && req.url === '/api/messages') {
+    setCors(res);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     return res.end(JSON.stringify(messages));
   }
 
   // Добавить сообщение
   if (req.method === 'POST' && req.url === '/api/messages') {
+    setCors(res);
     let body = '';
 
     req.on('data', chunk => {
@@ -54,7 +71,6 @@ const server = http.createServer((req, res) => {
           createdAt: new Date().toISOString()
         };
 
-        // Добавляем новое сообщение в начало
         messages.unshift(message);
 
         res.writeHead(201, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -68,11 +84,12 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Если путь не найден
+  // 404
+  setCors(res);
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('Не найдено');
 });
 
 server.listen(PORT, () => {
-  console.log(`Сервер запущен: http://localhost:${PORT}`);
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
